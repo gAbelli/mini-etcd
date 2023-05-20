@@ -22,7 +22,6 @@ func (s *Server) becomeLeader() {
 	s.mu.Unlock()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	for _, id := range s.n.NodeIDs() {
 		id := id
