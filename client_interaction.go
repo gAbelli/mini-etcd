@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"time"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
@@ -37,9 +39,6 @@ func (s *Server) handleRead(msg maelstrom.Message) error {
 		}
 		return s.n.Reply(msg, outputBody)
 	}
-
-	s.mu.Lock()
-	s.mu.Unlock()
 
 	val, err := s.db.Get(inputBody.Key)
 	if err != nil {
@@ -109,26 +108,31 @@ func (s *Server) handleWrite(msg maelstrom.Message) error {
 		}()
 	}
 
-	// count := 0
-	// for range s.n.NodeIDs() {
-	// 	err := <-responses
-	// 	if err == nil {
-	// 		count++
-	// 	}
-	// 	if count > len(s.n.NodeIDs())/2 {
-	// 		break
-	// 	}
-	// }
-	// if count <= len(s.n.NodeIDs())/2 {
-	// 	return fmt.Errorf("Not enough servers responded")
-	// }
+	count := 0
+	for range s.n.NodeIDs() {
+		err := <-responses
+		if err == nil {
+			count++
+		}
+		if count > len(s.n.NodeIDs())/2 {
+			break
+		}
+	}
+	if count <= len(s.n.NodeIDs())/2 {
+		return fmt.Errorf("Not enough servers responded")
+	}
 
 	s.mu.Lock()
-	commitIndex := s.CommitIndex + 1
-	s.CommitIndex = commitIndex
+	for s.CommitIndex != entry.Index-1 {
+		s.mu.Unlock()
+		time.Sleep(5 * time.Millisecond)
+		s.mu.Lock()
+	}
+	s.CommitIndex++
+	err := s.db.Set(inputBody.Key, inputBody.Value)
+	s.LastApplied++
 	s.mu.Unlock()
 
-	err := s.db.Set(inputBody.Key, inputBody.Value)
 	if err != nil {
 		return err
 	}
@@ -171,9 +175,57 @@ func (s *Server) handleCas(msg maelstrom.Message) error {
 	}
 
 	s.mu.Lock()
+	entry := LogEntry{
+		Index: len(s.Log),
+		Term:  s.CurrentTerm,
+		Command: map[string]any{
+			"type": "cas",
+			"key":  inputBody.Key,
+			"from": inputBody.From,
+			"to":   inputBody.To,
+		},
+	}
+	s.Log = append(s.Log, entry)
 	s.mu.Unlock()
 
+	responses := make(chan error, len(s.n.NodeIDs()))
+	responses <- nil
+	for _, id := range s.n.NodeIDs() {
+		id := id
+		if id == s.n.ID() {
+			continue
+		}
+		go func() {
+			err := s.sendAppendEntries(id)
+			responses <- err
+		}()
+	}
+
+	count := 0
+	for range s.n.NodeIDs() {
+		err := <-responses
+		if err == nil {
+			count++
+		}
+		if count > len(s.n.NodeIDs())/2 {
+			break
+		}
+	}
+	if count <= len(s.n.NodeIDs())/2 {
+		return fmt.Errorf("Not enough servers responded")
+	}
+
+	s.mu.Lock()
+	for s.CommitIndex != entry.Index-1 {
+		s.mu.Unlock()
+		time.Sleep(5 * time.Millisecond)
+		s.mu.Lock()
+	}
+	s.CommitIndex++
 	err := s.db.Cas(inputBody.Key, inputBody.From, inputBody.To)
+	s.LastApplied++
+	s.mu.Unlock()
+
 	if err != nil {
 		return err
 	}

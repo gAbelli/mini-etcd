@@ -48,6 +48,7 @@ func (s *Server) becomeLeader() {
 func (s *Server) sendAppendEntries(id string) error {
 	s.mu.Lock()
 	lastEntry := s.Log[len(s.Log)-1]
+	lastReplicatedEntry := s.Log[s.NextIndex[id]-1]
 	entries := []LogEntry{}
 	for i := s.NextIndex[id]; i < len(s.Log); i++ {
 		entries = append(entries, s.Log[i])
@@ -56,8 +57,8 @@ func (s *Server) sendAppendEntries(id string) error {
 		Type:         "append_entries",
 		Term:         s.CurrentTerm,
 		LeaderId:     s.n.ID(),
-		PrevLogIndex: lastEntry.Index,
-		PrevLogTerm:  lastEntry.Term,
+		PrevLogIndex: lastReplicatedEntry.Index,
+		PrevLogTerm:  lastReplicatedEntry.Term,
 		Entries:      entries,
 		LeaderCommit: s.CommitIndex,
 	}
