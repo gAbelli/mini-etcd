@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"math/rand"
+	"time"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
@@ -56,4 +58,10 @@ func (s *Server) requestVoteHandler(msg maelstrom.Message) error {
 
 	// If something is wrong, we end up here
 	return s.n.Reply(msg, outputBody)
+}
+
+func (s *Server) resetTimer() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.electionTimer.Reset(time.Duration(150+rand.Intn(100)) * time.Millisecond)
 }

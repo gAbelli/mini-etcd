@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"time"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
@@ -20,8 +21,9 @@ type Server struct {
 	n  *maelstrom.Node
 	mu sync.Mutex
 
-	db     *Db
-	dbChan chan int
+	db            *Db
+	dbChan        chan int
+	electionTimer *time.Timer
 
 	State       int
 	CurrentTerm int
@@ -35,12 +37,13 @@ type Server struct {
 
 func NewServer() *Server {
 	s := &Server{
-		n:          maelstrom.NewNode(),
-		db:         NewDb(),
-		dbChan:     make(chan int, 10),
-		State:      FOLLOWER,
-		NextIndex:  make(map[string]int),
-		MatchIndex: make(map[string]int),
+		n:             maelstrom.NewNode(),
+		db:            NewDb(),
+		dbChan:        make(chan int, 10),
+		electionTimer: time.NewTimer(100 * time.Millisecond),
+		State:         DEAD,
+		NextIndex:     make(map[string]int),
+		MatchIndex:    make(map[string]int),
 	}
 	// Make sure the log is never empty
 	s.Log = append(s.Log, LogEntry{
@@ -54,6 +57,7 @@ func NewServer() *Server {
 }
 
 func (s *Server) Run() {
+	s.becomeFollower()
 	go func() {
 		for {
 			index := <-s.dbChan

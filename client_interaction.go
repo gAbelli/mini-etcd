@@ -20,9 +20,6 @@ type ReadOutput struct {
 }
 
 func (s *Server) handleRead(msg maelstrom.Message) error {
-	if s.n.ID() == "n0" && s.State != LEADER {
-		s.becomeLeader()
-	}
 	var inputBody ReadInput
 	if err := json.Unmarshal(msg.Body, &inputBody); err != nil {
 		return err
@@ -62,9 +59,6 @@ type WriteOutput struct {
 }
 
 func (s *Server) handleWrite(msg maelstrom.Message) error {
-	if s.n.ID() == "n0" && s.State != LEADER {
-		s.becomeLeader()
-	}
 	var inputBody WriteInput
 	if err := json.Unmarshal(msg.Body, &inputBody); err != nil {
 		return err
@@ -154,9 +148,6 @@ type CasOutput struct {
 }
 
 func (s *Server) handleCas(msg maelstrom.Message) error {
-	if s.n.ID() == "n0" && s.State != LEADER {
-		s.becomeLeader()
-	}
 	var inputBody CasInput
 	if err := json.Unmarshal(msg.Body, &inputBody); err != nil {
 		return err
