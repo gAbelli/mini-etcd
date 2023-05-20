@@ -8,7 +8,7 @@ import (
 
 type ReadInput struct {
 	Type string `json:"type"`
-	Key  string `json:"key"`
+	Key  int    `json:"key"`
 }
 
 type ReadOutput struct {
@@ -37,7 +37,7 @@ func (s *Server) handleRead(msg maelstrom.Message) error {
 
 type WriteInput struct {
 	Type  string `json:"type"`
-	Key   string `json:"key"`
+	Key   int    `json:"key"`
 	Value int    `json:"value"`
 }
 
@@ -65,7 +65,7 @@ func (s *Server) handleWrite(msg maelstrom.Message) error {
 
 type CasInput struct {
 	Type string `json:"type"`
-	Key  string `json:"key"`
+	Key  int    `json:"key"`
 	From int    `json:"from"`
 	To   int    `json:"to"`
 }

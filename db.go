@@ -6,17 +6,17 @@ import (
 )
 
 type Db struct {
-	Entries map[string]int
+	Entries map[int]int
 	mu      sync.Mutex
 }
 
 func NewDb() *Db {
 	return &Db{
-		Entries: make(map[string]int),
+		Entries: make(map[int]int),
 	}
 }
 
-func (db *Db) Get(key string) (int, error) {
+func (db *Db) Get(key int) (int, error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	val, ok := db.Entries[key]
@@ -26,14 +26,14 @@ func (db *Db) Get(key string) (int, error) {
 	return val, nil
 }
 
-func (db *Db) Set(key string, val int) error {
+func (db *Db) Set(key int, val int) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	db.Entries[key] = val
 	return nil
 }
 
-func (db *Db) Cas(key string, from int, to int) error {
+func (db *Db) Cas(key int, from int, to int) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	val, ok := db.Entries[key]
