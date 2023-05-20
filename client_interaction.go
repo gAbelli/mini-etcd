@@ -25,8 +25,15 @@ func (s *Server) handleRead(msg maelstrom.Message) error {
 		return err
 	}
 
-	if s.State != LEADER && s.n.ID() != "n0" {
-		res, err := s.n.SyncRPC(context.Background(), "n0", inputBody)
+	s.mu.Lock()
+	currentLeader := s.currentLeader
+	s.mu.Unlock()
+
+	if s.State != LEADER {
+		if currentLeader == "" {
+			return fmt.Errorf("I don't know the leader")
+		}
+		res, err := s.n.SyncRPC(context.Background(), currentLeader, inputBody)
 		if err != nil {
 			return err
 		}
@@ -64,8 +71,15 @@ func (s *Server) handleWrite(msg maelstrom.Message) error {
 		return err
 	}
 
-	if s.State != LEADER && s.n.ID() != "n0" {
-		res, err := s.n.SyncRPC(context.Background(), "n0", inputBody)
+	s.mu.Lock()
+	currentLeader := s.currentLeader
+	s.mu.Unlock()
+
+	if s.State != LEADER {
+		if currentLeader == "" {
+			return fmt.Errorf("I don't know the leader")
+		}
+		res, err := s.n.SyncRPC(context.Background(), currentLeader, inputBody)
 		if err != nil {
 			return err
 		}
@@ -153,8 +167,15 @@ func (s *Server) handleCas(msg maelstrom.Message) error {
 		return err
 	}
 
-	if s.State != LEADER && s.n.ID() != "n0" {
-		res, err := s.n.SyncRPC(context.Background(), "n0", inputBody)
+	s.mu.Lock()
+	currentLeader := s.currentLeader
+	s.mu.Unlock()
+
+	if s.State != LEADER {
+		if currentLeader == "" {
+			return fmt.Errorf("I don't know the leader")
+		}
+		res, err := s.n.SyncRPC(context.Background(), currentLeader, inputBody)
 		if err != nil {
 			return err
 		}

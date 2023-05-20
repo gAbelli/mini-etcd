@@ -24,6 +24,7 @@ type Server struct {
 	db            *Db
 	dbChan        chan int
 	electionTimer *time.Timer
+	currentLeader string
 
 	State       int
 	CurrentTerm int

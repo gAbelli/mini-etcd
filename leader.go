@@ -11,6 +11,7 @@ import (
 func (s *Server) becomeLeader() {
 	s.mu.Lock()
 	s.State = LEADER
+	s.currentLeader = s.n.ID()
 	for _, id := range s.n.NodeIDs() {
 		lastEntry := s.Log[len(s.Log)-1]
 		s.NextIndex[id] = lastEntry.Index + 1
@@ -81,7 +82,7 @@ func (s *Server) sendAppendEntries(id string) error {
 		s.NextIndex[id] = lastEntry.Index + 1
 		s.MatchIndex[id] = lastEntry.Index
 	} else {
-		if s.NextIndex[id] > 0 {
+		if s.NextIndex[id] > 1 {
 			s.NextIndex[id]--
 		}
 		s.mu.Unlock()

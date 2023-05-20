@@ -33,11 +33,22 @@ func (s *Server) appendEntriesHandler(msg maelstrom.Message) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// If something is wrong, set success=false
 	outputBody.Term = s.CurrentTerm
+	if inputBody.Term > s.CurrentTerm {
+		s.CurrentTerm = inputBody.Term
+		s.mu.Unlock()
+		s.becomeFollower()
+		s.mu.Lock()
+	}
+
+	// If something is wrong, set success=false
 	if inputBody.Term < s.CurrentTerm {
 		return s.n.Reply(msg, outputBody)
 	}
+	s.currentLeader = inputBody.LeaderId
+	s.mu.Unlock()
+	s.resetTimer()
+	s.mu.Lock()
 	if inputBody.PrevLogIndex > len(s.Log)-1 || s.Log[inputBody.PrevLogIndex].Index != inputBody.PrevLogIndex || s.Log[inputBody.PrevLogIndex].Term != inputBody.PrevLogTerm {
 		return s.n.Reply(msg, outputBody)
 	}
