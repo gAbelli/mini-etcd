@@ -37,6 +37,12 @@ func (s *Server) requestVoteHandler(msg maelstrom.Message) error {
 	if inputBody.Term < s.CurrentTerm {
 		return s.n.Reply(msg, outputBody)
 	}
+	if inputBody.Term > s.CurrentTerm {
+		s.CurrentTerm = inputBody.Term
+		s.mu.Unlock()
+		s.becomeFollower()
+		s.mu.Lock()
+	}
 
 	if s.VotedFor == "" || s.VotedFor == inputBody.CandidateId {
 		// If he is more up-to-date, we vote for him

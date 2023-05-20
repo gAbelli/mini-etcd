@@ -88,6 +88,9 @@ func (s *Server) sendAppendEntries(id string) error {
 	if err != nil {
 		return err
 	} else if inputBody.Term > s.CurrentTerm {
+		s.mu.Lock()
+		s.CurrentTerm = inputBody.Term
+		s.mu.Unlock()
 		return TERM_OVER
 	}
 
