@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
@@ -21,6 +22,19 @@ func (s *Server) handleRead(msg maelstrom.Message) error {
 	if err := json.Unmarshal(msg.Body, &inputBody); err != nil {
 		return err
 	}
+
+	if s.State != LEADER && s.n.ID() != "n0" {
+		res, err := s.n.SyncRPC(context.Background(), "n0", inputBody)
+		if err != nil {
+			return err
+		}
+		var outputBody ReadOutput
+		if err = json.Unmarshal(res.Body, &outputBody); err != nil {
+			return err
+		}
+		return s.n.Reply(msg, outputBody)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -50,6 +64,19 @@ func (s *Server) handleWrite(msg maelstrom.Message) error {
 	if err := json.Unmarshal(msg.Body, &inputBody); err != nil {
 		return err
 	}
+
+	if s.State != LEADER && s.n.ID() != "n0" {
+		res, err := s.n.SyncRPC(context.Background(), "n0", inputBody)
+		if err != nil {
+			return err
+		}
+		var outputBody WriteOutput
+		if err = json.Unmarshal(res.Body, &outputBody); err != nil {
+			return err
+		}
+		return s.n.Reply(msg, outputBody)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -79,6 +106,19 @@ func (s *Server) handleCas(msg maelstrom.Message) error {
 	if err := json.Unmarshal(msg.Body, &inputBody); err != nil {
 		return err
 	}
+
+	if s.State != LEADER && s.n.ID() != "n0" {
+		res, err := s.n.SyncRPC(context.Background(), "n0", inputBody)
+		if err != nil {
+			return err
+		}
+		var outputBody CasOutput
+		if err = json.Unmarshal(res.Body, &outputBody); err != nil {
+			return err
+		}
+		return s.n.Reply(msg, outputBody)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

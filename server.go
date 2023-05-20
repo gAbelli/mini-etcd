@@ -32,14 +32,23 @@ type Server struct {
 }
 
 func NewServer() *Server {
-	return &Server{
+	s := &Server{
 		n:          maelstrom.NewNode(),
 		db:         NewDb(),
 		dbChan:     make(chan int, 10),
-		State:      LEADER,
+		State:      FOLLOWER,
 		NextIndex:  make(map[string]int),
 		MatchIndex: make(map[string]int),
 	}
+	// Make sure the log is never empty
+	s.Log = append(s.Log, LogEntry{
+		Index: 0,
+		Term:  0,
+		Command: map[string]any{
+			"type": "initialize",
+		},
+	})
+	return s
 }
 
 func (s *Server) Run() {
@@ -61,6 +70,9 @@ func (s *Server) Run() {
 				if err := s.db.Cas(key, from, to); err != nil {
 					log.Fatalf("Error while compare-and-swapping in the db: %v\n", err)
 				}
+			} else if command["type"] == "initialize" {
+			} else {
+				log.Fatalf("Invalid command")
 			}
 			s.mu.Unlock()
 		}
