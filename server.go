@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 	"sync"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
@@ -58,18 +60,37 @@ func (s *Server) Run() {
 			s.mu.Lock()
 			command := s.Log[index].Command
 			if command["type"] == "write" {
-				key := command["key"].(int)
-				val := command["val"].(int)
-				if err := s.db.Set(key, val); err != nil {
+				fmt.Fprintln(os.Stderr, command)
+				_key := command["key"]
+				key, ok := _key.(float64)
+				if !ok {
+					log.Fatalf("write key")
+				}
+				_val := command["val"]
+				val, ok := _val.(float64)
+				if !ok {
+					log.Fatalf("write val")
+				}
+				if err := s.db.Set(int(key), int(val)); err != nil {
 					log.Fatalf("Error while writing to the db: %v\n", err)
 				}
 			} else if command["type"] == "cas" {
-				key := command["key"].(int)
-				from := command["from"].(int)
-				to := command["to"].(int)
-				if err := s.db.Cas(key, from, to); err != nil {
-					log.Fatalf("Error while compare-and-swapping in the db: %v\n", err)
+				_key := command["key"]
+				key, ok := _key.(float64)
+				if !ok {
+					log.Fatalf("cas key")
 				}
+				_from := command["from"]
+				from, ok := _from.(float64)
+				if !ok {
+					log.Fatalf("cas from")
+				}
+				_to := command["to"]
+				to, ok := _to.(float64)
+				if !ok {
+					log.Fatalf("cas to")
+				}
+				_ = s.db.Cas(int(key), int(from), int(to))
 			} else if command["type"] == "initialize" {
 			} else {
 				log.Fatalf("Invalid command")

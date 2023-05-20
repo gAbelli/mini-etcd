@@ -1,8 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"sync"
+
+	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
 
 type Db struct {
@@ -21,7 +22,7 @@ func (db *Db) Get(key int) (int, error) {
 	defer db.mu.Unlock()
 	val, ok := db.Entries[key]
 	if !ok {
-		return 0, fmt.Errorf("Key not found")
+		return 0, maelstrom.NewRPCError(maelstrom.KeyDoesNotExist, "Key does not exist")
 	}
 	return val, nil
 }
@@ -38,10 +39,10 @@ func (db *Db) Cas(key int, from int, to int) error {
 	defer db.mu.Unlock()
 	val, ok := db.Entries[key]
 	if !ok {
-		return fmt.Errorf("Key not found")
+		return maelstrom.NewRPCError(maelstrom.KeyDoesNotExist, "Key does not exist")
 	}
 	if val != from {
-		return fmt.Errorf("Value different from the one expected")
+		return maelstrom.NewRPCError(maelstrom.PreconditionFailed, "Precondition failed")
 	}
 	db.Entries[key] = to
 	return nil

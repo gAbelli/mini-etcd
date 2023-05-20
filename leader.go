@@ -80,7 +80,9 @@ func (s *Server) sendAppendEntries(id string) error {
 		s.NextIndex[id] = lastEntry.Index + 1
 		s.MatchIndex[id] = lastEntry.Index
 	} else {
-		s.NextIndex[id]--
+		if s.NextIndex[id] > 0 {
+			s.NextIndex[id]--
+		}
 		s.mu.Unlock()
 		return s.sendAppendEntries(id)
 	}
