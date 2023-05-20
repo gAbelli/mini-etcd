@@ -67,34 +67,19 @@ func (s *Server) Run() {
 			if command["type"] == "write" {
 				fmt.Fprintln(os.Stderr, command)
 				_key := command["key"]
-				key, ok := _key.(float64)
-				if !ok {
-					log.Fatalf("write key")
-				}
+				key := _key.(float64)
 				_val := command["val"]
-				val, ok := _val.(float64)
-				if !ok {
-					log.Fatalf("write val")
-				}
+				val := _val.(float64)
 				if err := s.db.Set(int(key), int(val)); err != nil {
 					log.Fatalf("Error while writing to the db: %v\n", err)
 				}
 			} else if command["type"] == "cas" {
 				_key := command["key"]
-				key, ok := _key.(float64)
-				if !ok {
-					log.Fatalf("cas key")
-				}
+				key := _key.(float64)
 				_from := command["from"]
-				from, ok := _from.(float64)
-				if !ok {
-					log.Fatalf("cas from")
-				}
+				from := _from.(float64)
 				_to := command["to"]
-				to, ok := _to.(float64)
-				if !ok {
-					log.Fatalf("cas to")
-				}
+				to := _to.(float64)
 				_ = s.db.Cas(int(key), int(from), int(to))
 			} else if command["type"] == "initialize" {
 			} else {
@@ -105,6 +90,7 @@ func (s *Server) Run() {
 	}()
 
 	s.n.Handle("append_entries", s.appendEntriesHandler)
+	s.n.Handle("request_vote", s.requestVoteHandler)
 	s.n.Handle("read", s.handleRead)
 	s.n.Handle("write", s.handleWrite)
 	s.n.Handle("cas", s.handleCas)

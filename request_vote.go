@@ -42,6 +42,7 @@ func (s *Server) requestVoteHandler(msg maelstrom.Message) error {
 		// If he is more up-to-date, we vote for him
 		if inputBody.LastLogIndex >= len(s.Log) || len(s.Log) == 0 {
 			outputBody.VoteGranted = true
+			s.VotedFor = inputBody.CandidateId
 			return s.n.Reply(msg, outputBody)
 		}
 		// If we are more up-to-date, we don't vote for him
@@ -52,6 +53,7 @@ func (s *Server) requestVoteHandler(msg maelstrom.Message) error {
 		lastEntry := s.Log[len(s.Log)-1]
 		if lastEntry.Index == inputBody.LastLogIndex && lastEntry.Term == inputBody.LastLogTerm {
 			outputBody.VoteGranted = true
+			s.VotedFor = inputBody.CandidateId
 			return s.n.Reply(msg, outputBody)
 		}
 	}
