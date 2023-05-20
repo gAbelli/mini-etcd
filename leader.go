@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+var TERM_OVER = fmt.Errorf("A new term has started")
+
 func (s *Server) becomeLeader() {
 	s.mu.Lock()
 	s.State = LEADER
@@ -19,31 +21,47 @@ func (s *Server) becomeLeader() {
 	}
 	s.mu.Unlock()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	for _, id := range s.n.NodeIDs() {
 		id := id
 		go func() {
 			err := s.sendAppendEntries(id)
-			if err != nil {
+			if err == TERM_OVER {
+				cancel()
+			} else if err != nil {
 				fmt.Fprintf(os.Stderr, err.Error())
 			}
 		}()
 	}
 
-	t := time.NewTicker(50 * time.Millisecond)
-	for {
-		select {
-		case <-t.C:
-			for _, id := range s.n.NodeIDs() {
-				id := id
-				go func() {
-					err := s.sendAppendEntries(id)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, err.Error())
-					}
-				}()
+	go func() {
+		t := time.NewTicker(50 * time.Millisecond)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				for _, id := range s.n.NodeIDs() {
+					id := id
+					go func() {
+						err := s.sendAppendEntries(id)
+						if err == TERM_OVER {
+							cancel()
+						} else if err != nil {
+							fmt.Fprintf(os.Stderr, err.Error())
+						}
+					}()
+				}
 			}
 		}
-	}
+	}()
+
+	go func() {
+		<-ctx.Done()
+		s.becomeFollower()
+	}()
 }
 
 func (s *Server) sendAppendEntries(id string) error {
@@ -70,6 +88,8 @@ func (s *Server) sendAppendEntries(id string) error {
 	res, err := s.n.SyncRPC(ctx, id, inputBody)
 	if err != nil {
 		return err
+	} else if inputBody.Term > s.CurrentTerm {
+		return TERM_OVER
 	}
 
 	var outputBody AppendEntriesOutput
