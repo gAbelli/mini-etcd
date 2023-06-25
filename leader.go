@@ -64,6 +64,9 @@ func (s *Server) becomeLeader() {
 }
 
 func (s *Server) sendAppendEntries(id string) error {
+	if id == s.n.ID() {
+		return nil
+	}
 	s.mu.Lock()
 	lastEntry := s.Log[len(s.Log)-1]
 	lastReplicatedEntry := s.Log[s.NextIndex[id]-1]
